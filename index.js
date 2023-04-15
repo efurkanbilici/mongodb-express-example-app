@@ -2,6 +2,7 @@ import "dotenv/config";
 import express from "express";
 import mongoose from "mongoose";
 import pino from "pino";
+import rateLimit from "express-rate-limit";
 import { dbConfig } from "./utils.js";
 import routes from "./routes/index.js";
 
@@ -9,8 +10,21 @@ const port = process.env.SERVER_PORT || 3000;
 const app = express();
 const logger = pino();
 
+const limiter = rateLimit({
+  windowMs: 3600 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: async (req, res) => {
+    res.json({
+      ok: 0,
+      error: "You can only make 10 request every hour."
+    })
+  }
+});
+
 app.use(express.json());
-app.use("/api", routes);
+app.use("/api", [limiter, routes]);
 
 async function connectToDb() {
   try {
